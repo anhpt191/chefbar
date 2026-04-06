@@ -28,7 +28,7 @@ const DEFAULT_PRODUCTS: Product[] = [
     quantity: 50,
     category_id: 1,
     category_name: 'Signatures',
-    image_url: 'https://images.unsplash.com/photo-1600454021970-351feb4a5149?auto=format&fit=crop&q=80&w=800'
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Vietnamese_B%C3%A1nh_m%C3%AC_%28Banh_Mi%29_Sandwich.jpg/1200px-Vietnamese_B%C3%A1nh_m%C3%AC_%28Banh_Mi%29_Sandwich.jpg'
   },
   {
     id: 102,
@@ -38,7 +38,7 @@ const DEFAULT_PRODUCTS: Product[] = [
     quantity: 30,
     category_id: 1,
     category_name: 'Signatures',
-    image_url: 'https://images.unsplash.com/photo-1599481238505-b8b0537a3f77?auto=format&fit=crop&q=80&w=800'
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Platter_of_oysters.jpg/960px-Platter_of_oysters.jpg'
   },
   {
     id: 103,
@@ -48,7 +48,7 @@ const DEFAULT_PRODUCTS: Product[] = [
     quantity: 100,
     category_id: 2,
     category_name: 'Street Food',
-    image_url: 'https://images.unsplash.com/photo-1544435253-f09633887013?auto=format&fit=crop&q=80&w=800'
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Spring_rolls_%281%29.jpg/1200px-Spring_rolls_%281%29.jpg'
   },
   {
     id: 104,
@@ -58,7 +58,7 @@ const DEFAULT_PRODUCTS: Product[] = [
     quantity: 80,
     category_id: 3,
     category_name: 'Drinks',
-    image_url: 'https://images.unsplash.com/photo-1544787210-2827443cb39b?auto=format&fit=crop&q=80&w=800'
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Local_style_milk_tea.jpg/1200px-Local_style_milk_tea.jpg'
   }
 ];
 
