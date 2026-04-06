@@ -11,6 +11,136 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation,
 import { Product, Category, SiteSettings, CartItem, Article, Order, Venue } from './types';
 import { supabase } from './supabase';
 
+// Default Fallback Data
+const DEFAULT_CATEGORIES: Category[] = [
+  { id: 1, name: 'Signatures' },
+  { id: 2, name: 'Street Food' },
+  { id: 3, name: 'Drinks' },
+  { id: 4, name: 'Desserts' }
+];
+
+const DEFAULT_PRODUCTS: Product[] = [
+  {
+    id: 101,
+    name: 'Signature Banh Mi',
+    description: 'Crispy baguette with premium pate, house-made mayo, and slow-roasted pork belly.',
+    price: 65000,
+    quantity: 50,
+    category_id: 1,
+    category_name: 'Signatures',
+    image_url: 'https://images.unsplash.com/photo-1600454021970-351feb4a5149?auto=format&fit=crop&q=80&w=800'
+  },
+  {
+    id: 102,
+    name: 'Fresh Saigon Oysters',
+    description: 'Freshly shucked oysters served with our signature lime and chili dipping sauce.',
+    price: 120000,
+    quantity: 30,
+    category_id: 1,
+    category_name: 'Signatures',
+    image_url: 'https://images.unsplash.com/photo-1599481238505-b8b0537a3f77?auto=format&fit=crop&q=80&w=800'
+  },
+  {
+    id: 103,
+    name: 'Crispy Spring Rolls',
+    description: 'Hand-rolled with minced pork, shrimp, and wood-ear mushrooms. Served with fresh herbs.',
+    price: 45000,
+    quantity: 100,
+    category_id: 2,
+    category_name: 'Street Food',
+    image_url: 'https://images.unsplash.com/photo-1544435253-f09633887013?auto=format&fit=crop&q=80&w=800'
+  },
+  {
+    id: 104,
+    name: 'Lotus Tea with Milk',
+    description: 'Fragrant lotus tea blended with creamy milk and honey.',
+    price: 35000,
+    quantity: 80,
+    category_id: 3,
+    category_name: 'Drinks',
+    image_url: 'https://images.unsplash.com/photo-1544787210-2827443cb39b?auto=format&fit=crop&q=80&w=800'
+  }
+];
+
+const DEFAULT_ARTICLES: Article[] = [
+  {
+    id: 201,
+    title: 'The Art of Street Food Reimagined',
+    content: 'At CHEFSBAR., we believe that street food is the heart of Saigon. Our mission is to take these beloved classics and elevate them with premium ingredients and modern techniques.',
+    image_url: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1200',
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 202,
+    title: 'Celebrating Local Ingredients',
+    content: 'We source our seafood daily from local fishermen and our herbs from sustainable farms around the city. Freshness is the key to our signature flavors.',
+    image_url: 'https://images.unsplash.com/photo-1490818387583-1baba5e638af?auto=format&fit=crop&q=80&w=1200',
+    created_at: new Date().toISOString()
+  }
+];
+
+const DEFAULT_VENUES: Venue[] = [
+  {
+    id: 301,
+    address: '123 Le Loi Street, District 1, HCMC',
+    hours: '08:00 - 22:00',
+    map_url: 'https://goo.gl/maps/example1'
+  },
+  {
+    id: 302,
+    address: '45 Thao Dien Tower, District 2, HCMC',
+    hours: '10:00 - 23:30',
+    map_url: 'https://goo.gl/maps/example2'
+  }
+];
+
+const DEFAULT_SETTINGS: SiteSettings = { 
+  title: 'CHEFSBAR', 
+  description: 'Premium Street Food', 
+  favicon: '',
+  og_image: '',
+  primary_color: '#0038FF',
+  bg_color: '#F5F2ED',
+  marquee_text: 'CHEFSBAR PREMIUM STREET FOOD • FRESH OYSTERS DAILY • SIGNATURE BANH MI •',
+  footer_description: 'CHEFSBAR PREMIUM STREET FOOD\nRedefining Vietnamese street food with passion and precision.',
+  social_instagram: 'https://instagram.com/chefsbar',
+  social_facebook: 'https://facebook.com/chefsbar',
+  social_tiktok: 'https://tiktok.com/@chefsbar',
+  contact_phone: '090 110 98 80',
+  contact_email: 'HELLO@CHEFSBAR.VN',
+  header_icon: 'ChefHat'
+};
+
+const STORAGE_KEYS = {
+  products: 'chefsbar.showcase.products',
+  categories: 'chefsbar.showcase.categories',
+  articles: 'chefsbar.showcase.articles',
+  settings: 'chefsbar.showcase.settings',
+  venues: 'chefsbar.showcase.venues',
+  orders: 'chefsbar.showcase.orders',
+} as const;
+
+const readShowcaseState = <T,>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') return fallback;
+
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const writeShowcaseState = <T,>(key: string, value: T) => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignore local persistence failures in showcase mode.
+  }
+};
+
 // Components
 const ConditionalNavbar = ({ cartCount, onOpenCart, onOpenLogin, isAdmin, settings }: { cartCount: number, onOpenCart: () => void, onOpenLogin: () => void, isAdmin: boolean, settings: SiteSettings }) => {
   const location = useLocation();
@@ -334,7 +464,7 @@ const ArticlePage = ({ articles }: { articles: Article[] }) => {
   );
 };
 
-const HomePage = ({ products, articles, venues, settings, onProductClick }: { products: Product[], articles: Article[], venues: Venue[], settings: SiteSettings, onProductClick: (p: Product) => void }) => {
+const HomePage = ({ products, articles, venues, settings, onProductClick, isShowcaseMode }: { products: Product[], articles: Article[], venues: Venue[], settings: SiteSettings, onProductClick: (p: Product) => void, isShowcaseMode: boolean }) => {
   return (
     <div className="pt-0">
       {/* Hero Section */}
@@ -483,7 +613,9 @@ const HomePage = ({ products, articles, venues, settings, onProductClick }: { pr
           <div className="md:col-span-5">
             <Link to="/admin" className="group inline-block">
               <h2 className="text-6xl md:text-8xl font-display mb-2 group-hover:text-chefs-blue transition-colors leading-none">CHEFSBAR.</h2>
-              <span className="text-[10px] uppercase tracking-widest font-bold opacity-20 group-hover:opacity-100 transition-opacity">Admin Dashboard</span>
+              <span className="text-[10px] uppercase tracking-widest font-bold opacity-20 group-hover:opacity-100 transition-opacity">
+                {isShowcaseMode ? 'Showcase Dashboard' : 'Admin Dashboard'}
+              </span>
             </Link>
             <p className="text-sm opacity-60 leading-relaxed max-w-sm font-medium uppercase tracking-wider mt-8 whitespace-pre-line">
               {settings.footer_description}
@@ -556,7 +688,8 @@ const AdminPage = ({
   onUpdateVenue,
   onDeleteVenue,
   onUploadImage,
-  isUploading
+  isUploading,
+  isShowcaseMode
 }: { 
   products: Product[], 
   categories: Category[], 
@@ -578,7 +711,8 @@ const AdminPage = ({
   onUpdateVenue: (v: Venue) => void,
   onDeleteVenue: (id: number) => void,
   onUploadImage: (file: File) => Promise<string>,
-  isUploading: boolean
+  isUploading: boolean,
+  isShowcaseMode: boolean
 }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'articles' | 'venues' | 'settings' | 'password'>('orders');
@@ -652,6 +786,14 @@ const AdminPage = ({
 
       {/* Main Content */}
       <div className="flex-1 p-12 overflow-y-auto">
+        {isShowcaseMode && (
+          <div className="mb-8 rounded-3xl border border-chefs-blue/20 bg-chefs-blue/5 px-6 py-5">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-chefs-blue">Showcase mode</p>
+            <p className="mt-2 max-w-2xl text-sm font-medium text-zinc-600">
+              This dashboard is running from local demo data only. Changes stay in this browser and do not require Supabase.
+            </p>
+          </div>
+        )}
         <header className="flex justify-between items-center mb-12">
           <div>
             <h2 className="text-4xl font-display uppercase text-zinc-900">{activeTab}</h2>
@@ -1326,7 +1468,7 @@ const AdminPage = ({
   );
 };
 
-const CheckoutPage = ({ cart, onComplete }: { cart: CartItem[], onComplete: (nav: any) => void }) => {
+const CheckoutPage = ({ cart, onComplete, onPlaceOrder, isShowcaseMode }: { cart: CartItem[], onComplete: (nav: any) => void, onPlaceOrder: (order: Omit<Order, 'id' | 'status' | 'created_at'>) => Promise<boolean>, isShowcaseMode: boolean }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'Banking'>('COD');
@@ -1341,31 +1483,25 @@ const CheckoutPage = ({ cart, onComplete }: { cart: CartItem[], onComplete: (nav
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    if (supabase) {
-      const { error } = await supabase.from('orders').insert([{
-        customer_name: customerInfo.name,
-        customer_email: customerInfo.email,
-        customer_phone: customerInfo.phone,
-        customer_address: customerInfo.address,
-        total,
-        items: JSON.stringify(cart),
-        payment_method: paymentMethod || 'COD'
-      }]);
-      
-      if (!error) {
-        setTimeout(() => {
-          setLoading(false);
-          onComplete(navigate);
-        }, 2000);
-      } else {
-        console.error('Checkout error:', error);
+
+    const success = await onPlaceOrder({
+      customer_name: customerInfo.name,
+      customer_email: customerInfo.email,
+      customer_phone: customerInfo.phone,
+      customer_address: customerInfo.address,
+      total,
+      items: JSON.stringify(cart),
+      payment_method: paymentMethod || 'COD'
+    });
+
+    if (success) {
+      setTimeout(() => {
         setLoading(false);
-        alert('Failed to process order');
-      }
+        onComplete(navigate);
+      }, 1200);
     } else {
       setLoading(false);
-      alert('Supabase is not connected');
+      alert('Failed to process order');
     }
   };
 
@@ -1374,6 +1510,15 @@ const CheckoutPage = ({ cart, onComplete }: { cart: CartItem[], onComplete: (nav
       <div className="flex flex-col md:flex-row gap-16">
         <div className="flex-1">
           <h1 className="text-6xl font-display mb-12 uppercase text-chefs-blue">Checkout</h1>
+
+          {isShowcaseMode && (
+            <div className="mb-8 rounded-2xl border border-chefs-blue/20 bg-chefs-blue/5 p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-chefs-blue">Demo checkout</p>
+              <p className="mt-2 text-sm font-medium text-zinc-600">
+                Orders are saved locally for portfolio demo purposes and are not sent to a live backend.
+              </p>
+            </div>
+          )}
           
           <form onSubmit={handleCheckout} className="space-y-12">
             <section>
@@ -1577,26 +1722,12 @@ const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }: { isOpen: boolea
 };
 
 export default function App() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [settings, setSettings] = useState<SiteSettings>({ 
-    title: 'CHEFSBAR', 
-    description: 'Premium Street Food', 
-    favicon: '',
-    og_image: '',
-    primary_color: '#0038FF',
-    bg_color: '#F5F2ED',
-    marquee_text: 'CHEFSBAR PREMIUM STREET FOOD • FRESH OYSTERS DAILY • SIGNATURE BANH MI •',
-    footer_description: 'CHEFSBAR PREMIUM STREET FOOD\nRedefining Vietnamese street food with passion and precision.',
-    social_instagram: 'https://instagram.com',
-    social_facebook: 'https://facebook.com',
-    social_tiktok: 'https://tiktok.com',
-    contact_phone: '090 110 98 80',
-    contact_email: 'HELLO@CHEFSBAR.VN',
-    header_icon: 'ChefHat'
-  });
-  const [venues, setVenues] = useState<Venue[]>([]);
+  const isShowcaseMode = !supabase;
+  const [products, setProducts] = useState<Product[]>(() => readShowcaseState(STORAGE_KEYS.products, DEFAULT_PRODUCTS));
+  const [categories, setCategories] = useState<Category[]>(() => readShowcaseState(STORAGE_KEYS.categories, DEFAULT_CATEGORIES));
+  const [articles, setArticles] = useState<Article[]>(() => readShowcaseState(STORAGE_KEYS.articles, DEFAULT_ARTICLES));
+  const [settings, setSettings] = useState<SiteSettings>(() => readShowcaseState(STORAGE_KEYS.settings, DEFAULT_SETTINGS));
+  const [venues, setVenues] = useState<Venue[]>(() => readShowcaseState(STORAGE_KEYS.venues, DEFAULT_VENUES));
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -1606,7 +1737,7 @@ export default function App() {
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean, message: string, onConfirm: () => void }>({ isOpen: false, message: '', onConfirm: () => {} });
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('admin-token'));
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Order[]>(() => readShowcaseState(STORAGE_KEYS.orders, [] as Order[]));
 
   useEffect(() => {
     fetchData();
@@ -1636,8 +1767,21 @@ export default function App() {
     if (supabase) {
       const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (data && !error) setOrders(data);
+    } else {
+      setOrders(readShowcaseState(STORAGE_KEYS.orders, [] as Order[]));
     }
   };
+
+  useEffect(() => {
+    if (!isShowcaseMode) return;
+
+    writeShowcaseState(STORAGE_KEYS.products, products);
+    writeShowcaseState(STORAGE_KEYS.categories, categories);
+    writeShowcaseState(STORAGE_KEYS.articles, articles);
+    writeShowcaseState(STORAGE_KEYS.settings, settings);
+    writeShowcaseState(STORAGE_KEYS.venues, venues);
+    writeShowcaseState(STORAGE_KEYS.orders, orders);
+  }, [articles, categories, isShowcaseMode, orders, products, settings, venues]);
 
   useEffect(() => {
     const syncLocalImages = async () => {
@@ -1667,6 +1811,23 @@ export default function App() {
   }, [supabase]);
 
   const fetchData = async () => {
+    // Set defaults first as initial state
+    const setDefaults = () => {
+      setProducts(DEFAULT_PRODUCTS);
+      setCategories(DEFAULT_CATEGORIES);
+      setArticles(DEFAULT_ARTICLES);
+      setVenues(DEFAULT_VENUES);
+      setSettings(DEFAULT_SETTINGS);
+    };
+
+    const setShowcaseSnapshot = () => {
+      setProducts(readShowcaseState(STORAGE_KEYS.products, DEFAULT_PRODUCTS));
+      setCategories(readShowcaseState(STORAGE_KEYS.categories, DEFAULT_CATEGORIES));
+      setArticles(readShowcaseState(STORAGE_KEYS.articles, DEFAULT_ARTICLES));
+      setVenues(readShowcaseState(STORAGE_KEYS.venues, DEFAULT_VENUES));
+      setSettings(readShowcaseState(STORAGE_KEYS.settings, DEFAULT_SETTINGS));
+    };
+
     if (supabase) {
       try {
         const [pSup, cSup, sSup, aSup, vSup] = await Promise.all([
@@ -1679,26 +1840,40 @@ export default function App() {
 
         if (pSup.error || cSup.error) {
           console.error("Supabase fetch error:", pSup.error || cSup.error);
+          setDefaults();
         } else {
-          const productsWithCategory = (pSup.data || []).map((p: any) => ({
-            ...p,
-            category_name: cSup.data?.find((c: any) => c.id === p.category_id)?.name
-          }));
-          setProducts(productsWithCategory);
-          setCategories(cSup.data || []);
-          setArticles(aSup.data || []);
-          setVenues(vSup.data || []);
-          if (sSup.data) {
-            const settingsObj = sSup.data.reduce((acc: any, curr: any) => {
-              acc[curr.key] = curr.value;
-              return acc;
-            }, {});
-            setSettings(prev => ({ ...prev, ...settingsObj }));
+          // If all data is empty, it might be a new DB or connection issue that didn't error out
+          if (!pSup.data?.length && !cSup.data?.length && !aSup.data?.length) {
+            console.warn("Supabase returned empty data, using defaults.");
+            setDefaults();
+          } else {
+            const productsWithCategory = (pSup.data || []).map((p: any) => ({
+              ...p,
+              category_name: cSup.data?.find((c: any) => c.id === p.category_id)?.name
+            }));
+            setProducts(productsWithCategory.length > 0 ? productsWithCategory : DEFAULT_PRODUCTS);
+            setCategories(cSup.data && cSup.data.length > 0 ? cSup.data : DEFAULT_CATEGORIES);
+            setArticles(aSup.data && aSup.data.length > 0 ? aSup.data : DEFAULT_ARTICLES);
+            setVenues(vSup.data && vSup.data.length > 0 ? vSup.data : DEFAULT_VENUES);
+            
+            if (sSup.data && sSup.data.length > 0) {
+              const settingsObj = sSup.data.reduce((acc: any, curr: any) => {
+                acc[curr.key] = curr.value;
+                return acc;
+              }, {});
+              setSettings(prev => ({ ...prev, ...settingsObj }));
+            } else {
+              setSettings(DEFAULT_SETTINGS);
+            }
           }
         }
       } catch (e) {
         console.error('Supabase fetch exception:', e);
+        setDefaults();
       }
+    } else {
+      console.warn("Supabase client not initialized, loading showcase data.");
+      setShowcaseSnapshot();
     }
   };
 
@@ -1777,8 +1952,15 @@ export default function App() {
           return '';
         }
       } else {
-        notify('Supabase is not connected. Cannot upload image.');
-        return '';
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+
+        notify('Image saved locally for showcase mode');
+        return dataUrl;
       }
     } catch (error) {
       console.error('Image upload failed:', error);
@@ -1800,7 +1982,9 @@ export default function App() {
         notify('Product updated successfully');
       }
     } else {
-      notify('Supabase is not connected');
+      const category_name = categories.find(category => category.id === p.category_id)?.name || p.category_name || 'Menu';
+      setProducts(prev => prev.map(product => product.id === p.id ? { ...p, category_name } : product));
+      notify('Product updated locally');
     }
   };
 
@@ -1816,7 +2000,22 @@ export default function App() {
         notify('Product added successfully');
       }
     } else {
-      notify('Supabase is not connected');
+      const category_id = p.category_id ?? categories[0]?.id ?? DEFAULT_CATEGORIES[0].id;
+      const category_name = categories.find(category => category.id === category_id)?.name || DEFAULT_CATEGORIES[0].name;
+      setProducts(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          name: p.name || 'New Product',
+          description: p.description || '',
+          price: p.price || 0,
+          quantity: p.quantity || 0,
+          image_url: p.image_url || '',
+          category_id,
+          category_name
+        }
+      ]);
+      notify('Product added locally');
     }
   };
 
@@ -1835,7 +2034,8 @@ export default function App() {
             notify('Product deleted successfully');
           }
         } else {
-          notify('Supabase is not connected');
+          setProducts(prev => prev.filter(product => product.id !== id));
+          notify('Product removed locally');
         }
       }
     });
@@ -1853,7 +2053,8 @@ export default function App() {
         notify('Settings updated successfully');
       }
     } else {
-      notify('Supabase is not connected');
+      setSettings(s);
+      notify('Settings updated locally');
     }
   };
 
@@ -1868,7 +2069,17 @@ export default function App() {
         notify('Article added successfully');
       }
     } else {
-      notify('Supabase is not connected');
+      setArticles(prev => [
+        {
+          id: Date.now(),
+          title: a.title || 'New Story',
+          content: a.content || '',
+          image_url: a.image_url || '',
+          created_at: new Date().toISOString()
+        },
+        ...prev
+      ]);
+      notify('Article added locally');
     }
   };
 
@@ -1883,7 +2094,8 @@ export default function App() {
         notify('Article updated successfully');
       }
     } else {
-      notify('Supabase is not connected');
+      setArticles(prev => prev.map(article => article.id === a.id ? a : article));
+      notify('Article updated locally');
     }
   };
 
@@ -1902,7 +2114,8 @@ export default function App() {
             notify('Article deleted successfully');
           }
         } else {
-          notify('Supabase is not connected');
+          setArticles(prev => prev.filter(article => article.id !== id));
+          notify('Article removed locally');
         }
       }
     });
@@ -1919,7 +2132,16 @@ export default function App() {
         notify('Venue added successfully');
       }
     } else {
-      notify('Supabase is not connected');
+      setVenues(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          address: v.address || 'New venue',
+          hours: v.hours || '',
+          map_url: v.map_url || '#'
+        }
+      ]);
+      notify('Venue added locally');
     }
   };
 
@@ -1934,7 +2156,8 @@ export default function App() {
         notify('Venue updated successfully');
       }
     } else {
-      notify('Supabase is not connected');
+      setVenues(prev => prev.map(venue => venue.id === v.id ? v : venue));
+      notify('Venue updated locally');
     }
   };
 
@@ -1953,7 +2176,8 @@ export default function App() {
             notify('Venue deleted successfully');
           }
         } else {
-          notify('Supabase is not connected');
+          setVenues(prev => prev.filter(venue => venue.id !== id));
+          notify('Venue removed locally');
         }
       }
     });
@@ -1973,7 +2197,7 @@ export default function App() {
         notify('Password updated successfully');
       }
     } else {
-      notify('Supabase is not connected');
+      notify('Showcase mode does not use a live admin password');
     }
   };
 
@@ -1988,8 +2212,32 @@ export default function App() {
         notify('Order status updated');
       }
     } else {
-      notify('Supabase is not connected');
+      setOrders(prev => prev.map(order => order.id === id ? { ...order, status: status as Order['status'] } : order));
+      notify('Order status updated locally');
     }
+  };
+
+  const handlePlaceOrder = async (orderInput: Omit<Order, 'id' | 'status' | 'created_at'>) => {
+    if (supabase) {
+      const { error } = await supabase.from('orders').insert([orderInput]);
+
+      if (error) {
+        console.error('Checkout error:', error);
+        return false;
+      }
+
+      return true;
+    }
+
+    const localOrder: Order = {
+      id: Date.now(),
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      ...orderInput
+    };
+
+    setOrders(prev => [localOrder, ...prev]);
+    return true;
   };
 
   const handleLogout = (navigate: any) => {
@@ -2021,9 +2269,9 @@ export default function App() {
         />
         
         <Routes>
-          <Route path="/" element={<HomePage products={products} articles={articles} venues={venues} settings={settings} onProductClick={setSelectedProduct} />} />
+          <Route path="/" element={<HomePage products={products} articles={articles} venues={venues} settings={settings} onProductClick={setSelectedProduct} isShowcaseMode={isShowcaseMode} />} />
           <Route path="/admin" element={
-            token ? (
+            isShowcaseMode ? (
               <AdminPage 
                 products={products} 
                 categories={categories} 
@@ -2046,6 +2294,32 @@ export default function App() {
                 onDeleteVenue={handleAdminDeleteVenue}
                 onUploadImage={handleImageUpload}
                 isUploading={isUploading}
+                isShowcaseMode={isShowcaseMode}
+              />
+            ) : token ? (
+              <AdminPage 
+                products={products} 
+                categories={categories} 
+                settings={settings}
+                articles={articles}
+                orders={orders}
+                venues={venues}
+                onUpdateProduct={handleAdminUpdateProduct}
+                onDeleteProduct={handleAdminDeleteProduct}
+                onAddProduct={handleAdminAddProduct}
+                onUpdateSettings={handleAdminUpdateSettings}
+                onAddArticle={handleAdminAddArticle}
+                onUpdateArticle={handleAdminUpdateArticle}
+                onDeleteArticle={handleAdminDeleteArticle}
+                onChangePassword={handleChangePassword}
+                onUpdateOrderStatus={handleUpdateOrderStatus}
+                onLogout={handleLogout}
+                onAddVenue={handleAdminAddVenue}
+                onUpdateVenue={handleAdminUpdateVenue}
+                onDeleteVenue={handleAdminDeleteVenue}
+                onUploadImage={handleImageUpload}
+                isUploading={isUploading}
+                isShowcaseMode={isShowcaseMode}
               />
             ) : (
               <div className="pt-48 text-center">
@@ -2054,7 +2328,7 @@ export default function App() {
               </div>
             )
           } />
-          <Route path="/checkout" element={<CheckoutPage cart={cart} onComplete={(nav) => { setCart([]); notify('Order Placed Successfully!'); nav('/'); }} />} />
+          <Route path="/checkout" element={<CheckoutPage cart={cart} onComplete={(nav) => { setCart([]); notify(isShowcaseMode ? 'Demo order saved locally' : 'Order Placed Successfully!'); nav('/'); }} onPlaceOrder={handlePlaceOrder} isShowcaseMode={isShowcaseMode} />} />
           <Route path="/article/:id" element={<ArticlePage articles={articles} />} />
         </Routes>
 
